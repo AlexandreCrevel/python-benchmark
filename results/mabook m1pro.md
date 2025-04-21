@@ -1,0 +1,88 @@
+# Python Benchmark Results – MacBook M1 Pro
+
+## Configuration
+
+- **Python**: 3.11.2
+- **NumPy**: 2.2.5
+
+---
+
+## Benchmarks détaillés
+
+### 1. CPU – Calcul de Fibonacci(40)
+```text
+Fibonacci(40) = 102334155 (peut être différent si n > ~90 à cause des floats)
+Temps écoulé: 12.6597 secondes
+```
+
+### 2. CPU – Nombres premiers jusqu'à 1 500 000
+```text
+Trouvé 114155 nombres premiers jusqu'à 1500000
+Temps écoulé: 3.4175 secondes
+```
+
+### 3. CPU/SIMD – Multiplication de matrices (10000x10000)
+```text
+Multiplication de matrices 10000x10000 terminée. Somme de la résultante : 249985263105.99
+Temps écoulé: 5.4648 secondes
+```
+
+### 4. Mémoire/CPU – Création et tri d'une liste (20 000 000 éléments)
+```text
+Création et tri d'une liste de 20000000 entiers terminé.
+Temps écoulé: 9.5227 secondes
+```
+
+### 5. I/O Disque – Écriture/Lecture d'un fichier de 2560 Mo
+```text
+Écrit 2560 Mo sur le disque.
+Lu 2560.00 Mo depuis le disque.
+Temps d'écriture : 1.5467 secondes
+Temps de lecture : 0.4361 secondes
+```
+
+### 6. I/O Disque – Écriture/Lecture de 10 000 fichiers de 40 Ko
+```text
+Écrit 10000 fichiers de 40 Ko.
+Lu 390.62 Mo depuis 10000 petits fichiers.
+Temps d'écriture : 1.1538 secondes
+Temps de lecture : 0.3902 secondes
+```
+
+### 7. CPU/Mémoire – Hash SHA-256 de 1000 Mo de données
+```text
+Hash SHA-256 de 1000 Mo calculé: 4115e988f1...
+Temps écoulé: 5.1841 secondes
+```
+
+### 8. CPU – Compression/Décompression zlib de 500 Mo
+```text
+Compression de 500 Mo terminée. Ratio: 1.00 (524447936 bytes)
+Décompression de 500.15 Mo terminée.
+Temps de compression : 12.0842 secondes
+Temps de décompression : 0.3685 secondes
+```
+
+---
+
+> Dossier temporaire `benchmark_temp` nettoyé.
+
+---
+
+## Résumé des résultats (secondes, plus bas = meilleur)
+
+| Test                | Temps (s) |
+|---------------------|-----------|
+| Fibonacci           | 12.6597   |
+| Primes              | 3.4175    |
+| Matrix Multiply     | 5.4648    |
+| List Operations     | 9.5227    |
+| Large File Write    | 1.5467    |
+| Large File Read     | 0.4361    |
+| Small Files Write   | 1.1538    |
+| Small Files Read    | 0.3902    |
+| Hashing            | 5.1841    |
+| Compression         | 12.0842   |
+| Decompression       | 0.3685    |
+
+---
