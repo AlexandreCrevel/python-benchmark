@@ -7,6 +7,10 @@ import string
 import numpy as np
 import hashlib
 import zlib
+from typing import Dict, Optional, List
+from io import StringIO
+import sys
+from datetime import datetime
 
 # --- Configuration des Benchmarks ---
 # Vous pouvez ajuster ces valeurs si un test est trop rapide ou trop lent
@@ -236,72 +240,172 @@ def benchmark_compression(data_size_mb):
 
 # --- Exécution des Benchmarks ---
 
+def generate_markdown_report(
+    results: Dict[str, Optional[float]],
+    config: Dict[str, str],
+    logs: List[str],
+    output_path: str
+) -> None:
+    """
+    Generate a markdown benchmark report.
+    Args:
+        results: dict of test name to duration
+        config: dict of configuration strings
+        logs: list of log strings for each benchmark
+        output_path: path to write the .md file
+    """
+    # Header
+    md = [
+        f"# Python Benchmark Results – {config.get('machine', 'Unknown Machine')}",
+        "",
+        "## Configuration",
+        "",
+        f"- **Python**: {config['python']}",
+        f"- **NumPy**: {config['numpy']}",
+        "",
+        "---",
+        "",
+        "## Benchmarks détaillés",
+        ""
+    ]
+    md.extend(logs)
+    md.append("\n---\n")
+    md.append(f"> Dossier temporaire `{config.get('temp_dir', 'benchmark_temp')}` nettoyé.")
+    md.append("\n---\n")
+    md.append("## Résumé des résultats (secondes, plus bas = meilleur)\n")
+    md.append("| Test                | Temps (s) |\n|---------------------|-----------|")
+    order = [
+        ("fibonacci", "Fibonacci"),
+        ("primes", "Primes"),
+        ("matrix_multiply", "Matrix Multiply"),
+        ("list_operations", "List Operations"),
+        ("large_file_write", "Large File Write"),
+        ("large_file_read", "Large File Read"),
+        ("small_files_write", "Small Files Write"),
+        ("small_files_read", "Small Files Read"),
+        ("hashing", "Hashing"),
+        ("compression", "Compression"),
+        ("decompression", "Decompression")
+    ]
+    for key, label in order:
+        val = results.get(key)
+        md.append(f"| {label:<19} | {val:.4f}    |" if val is not None else f"| {label:<19} | ÉCHEC     |")
+    md.append("\n---\n")
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(md))
+
 if __name__ == "__main__":
     results = {}
+    logs: List[str] = []
+    config = {
+        "python": '.'.join(map(str, os.sys.version_info[:3])),
+        "numpy": np.__version__,
+        "machine": os.uname().nodename if hasattr(os, 'uname') else 'Unknown',
+        "temp_dir": TEMP_DIR
+    }
+    def log_md(title: str, content: str) -> None:
+        logs.append(f"### {title}\n```text\n{content}\n```")
     print("Démarrage des benchmarks Python...")
     print("-" * 30)
-    print(f"Configuration : Python {'.'.join(map(str, os.sys.version_info[:3]))}, NumPy {np.__version__}")
+    print(f"Configuration : Python {config['python']}, NumPy {config['numpy']}")
     print("-" * 30)
 
     # 1. Calcul CPU - Fibonacci
+    # 1. Calcul CPU - Fibonacci
     print(f"[1] Benchmark CPU: Calcul de Fibonacci({FIB_NUMBER})")
+    buf = StringIO()
+    sys.stdout = buf
     results['fibonacci'] = benchmark_fibonacci(FIB_NUMBER)
+    sys.stdout = sys.__stdout__
+    log_md("1. CPU – Calcul de Fibonacci(40)", buf.getvalue() + f"Temps écoulé: {results['fibonacci']:.4f} secondes")
     print(f"Temps écoulé: {results['fibonacci']:.4f} secondes\n")
 
     # 2. Calcul CPU - Nombres Premiers
     print(f"[2] Benchmark CPU: Calcul des nombres premiers jusqu'à {PRIME_LIMIT}")
+    buf = StringIO()
+    sys.stdout = buf
     results['primes'] = benchmark_primes(PRIME_LIMIT)
+    sys.stdout = sys.__stdout__
+    log_md("2. CPU – Nombres premiers jusqu'à 1 500 000", buf.getvalue() + f"Temps écoulé: {results['primes']:.4f} secondes")
     print(f"Temps écoulé: {results['primes']:.4f} secondes\n")
 
     # 3. Calcul CPU/SIMD - Multiplication de Matrices (NumPy)
     print(f"[3] Benchmark CPU/SIMD: Multiplication de matrices ({MATRIX_SIZE}x{MATRIX_SIZE})")
+    buf = StringIO()
+    sys.stdout = buf
     results['matrix_multiply'] = benchmark_matrix_multiplication(MATRIX_SIZE)
+    sys.stdout = sys.__stdout__
+    log_md("3. CPU/SIMD – Multiplication de matrices (10000x10000)", buf.getvalue() + f"Temps écoulé: {results['matrix_multiply']:.4f} secondes")
     print(f"Temps écoulé: {results['matrix_multiply']:.4f} secondes\n")
 
     # 4. Mémoire/CPU - Opérations sur Listes
     print(f"[4] Benchmark Mémoire/CPU: Création et tri d'une liste ({LIST_SIZE} éléments)")
+    buf = StringIO()
+    sys.stdout = buf
     results['list_operations'] = benchmark_list_operations(LIST_SIZE)
+    sys.stdout = sys.__stdout__
+    log_md("4. Mémoire/CPU – Création et tri d'une liste (20 000 000 éléments)", buf.getvalue() + f"Temps écoulé: {results['list_operations']:.4f} secondes")
     print(f"Temps écoulé: {results['list_operations']:.4f} secondes\n")
 
     # 5. I/O Disque - Gros Fichier
     print(f"[5] Benchmark I/O Disque: Écriture/Lecture d'un fichier de {LARGE_FILE_SIZE_MB} Mo")
+    buf = StringIO()
+    sys.stdout = buf
     write_time, read_time = benchmark_large_file_io(LARGE_FILE_SIZE_MB)
+    sys.stdout = sys.__stdout__
     if write_time is not None:
         results['large_file_write'] = write_time
-        print(f"Temps d'écriture : {results['large_file_write']:.4f} secondes")
     if read_time is not None:
         results['large_file_read'] = read_time
+    log_md("5. I/O Disque – Écriture/Lecture d'un fichier de 2560 Mo", buf.getvalue() + (f"Temps d'écriture : {results.get('large_file_write', 0):.4f} secondes\nTemps de lecture : {results.get('large_file_read', 0):.4f} secondes" if write_time and read_time else "ÉCHEC"))
+    if write_time is not None:
+        print(f"Temps d'écriture : {results['large_file_write']:.4f} secondes")
+    if read_time is not None:
         print(f"Temps de lecture  : {results['large_file_read']:.4f} secondes\n")
     else:
          print("Le test d'I/O sur gros fichier a échoué.\n")
 
-
     # 6. I/O Disque - Petits Fichiers
     print(f"[6] Benchmark I/O Disque: Écriture/Lecture de {NUM_SMALL_FILES} fichiers de {SMALL_FILE_SIZE_KB} Ko")
+    buf = StringIO()
+    sys.stdout = buf
     write_time_small, read_time_small = benchmark_small_files_io(NUM_SMALL_FILES, SMALL_FILE_SIZE_KB)
+    sys.stdout = sys.__stdout__
     if write_time_small is not None:
         results['small_files_write'] = write_time_small
-        print(f"Temps d'écriture : {results['small_files_write']:.4f} secondes")
     if read_time_small is not None:
         results['small_files_read'] = read_time_small
+    log_md("6. I/O Disque – Écriture/Lecture de 10 000 fichiers de 40 Ko", buf.getvalue() + (f"Temps d'écriture : {results.get('small_files_write', 0):.4f} secondes\nTemps de lecture : {results.get('small_files_read', 0):.4f} secondes" if write_time_small and read_time_small else "ÉCHEC"))
+    if write_time_small is not None:
+        print(f"Temps d'écriture : {results['small_files_write']:.4f} secondes")
+    if read_time_small is not None:
         print(f"Temps de lecture  : {results['small_files_read']:.4f} secondes\n")
     else:
          print("Le test d'I/O sur petits fichiers a échoué.\n")
 
-
     # 7. CPU/Mémoire - Hashing
     print(f"[7] Benchmark CPU/Mémoire: Hash SHA-256 de {HASH_DATA_SIZE_MB} Mo de données")
+    buf = StringIO()
+    sys.stdout = buf
     results['hashing'] = benchmark_hashing(HASH_DATA_SIZE_MB)
+    sys.stdout = sys.__stdout__
+    log_md("7. CPU/Mémoire – Hash SHA-256 de 1000 Mo de données", buf.getvalue() + f"Temps écoulé: {results['hashing']:.4f} secondes")
     print(f"Temps écoulé: {results['hashing']:.4f} secondes\n")
 
     # 8. CPU - Compression/Décompression
     print(f"[8] Benchmark CPU: Compression/Décompression zlib de {COMPRESS_DATA_SIZE_MB} Mo de données")
+    buf = StringIO()
+    sys.stdout = buf
     compress_time, decompress_time = benchmark_compression(COMPRESS_DATA_SIZE_MB)
+    sys.stdout = sys.__stdout__
     if compress_time is not None:
         results['compression'] = compress_time
-        print(f"Temps de compression   : {results['compression']:.4f} secondes")
     if decompress_time is not None:
         results['decompression'] = decompress_time
+    log_md("8. CPU – Compression/Décompression zlib de 500 Mo", buf.getvalue() + (f"Temps de compression : {results.get('compression', 0):.4f} secondes\nTemps de décompression : {results.get('decompression', 0):.4f} secondes" if compress_time and decompress_time else "ÉCHEC"))
+    if compress_time is not None:
+        print(f"Temps de compression   : {results['compression']:.4f} secondes")
+    if decompress_time is not None:
         print(f"Temps de décompression : {results['decompression']:.4f} secondes\n")
     else:
         print("Le test de compression/décompression a échoué.\n")
@@ -320,6 +424,14 @@ if __name__ == "__main__":
             print(f"Dossier temporaire '{TEMP_DIR}' nettoyé.")
         except Exception as e:
             print(f"Avertissement: Impossible de nettoyer complètement le dossier temporaire '{TEMP_DIR}': {e}")
+
+    # --- Génération du rapport Markdown ---
+    output_dir = "results"
+    os.makedirs(output_dir, exist_ok=True)
+    now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_path = os.path.join(output_dir, f"benchmark_{now}.md")
+    generate_markdown_report(results, config, logs, output_path)
+    print(f"\nRapport markdown généré dans : {output_path}\n")
 
     # --- Affichage du Résumé ---
     print("=" * 30)
