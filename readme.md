@@ -1,67 +1,67 @@
-# Projet de Benchmark Python Simple
+# Simple Python Benchmark Project
 
-Ce projet fournit un ensemble de scripts Python pour évaluer et comparer les performances de différentes machines (par exemple, un PC Windows et un MacBook) sur diverses tâches de calcul.
+This project provides a set of Python scripts to evaluate and compare the performance of different machines (for example, a Windows PC and a MacBook) on various computational tasks.
 
-## Prérequis
+## Prerequisites
 
-- **Python 3**: Assurez-vous que Python 3 (version 3.7 ou supérieure recommandée) est installé sur les deux machines.
-- **pip**: Le gestionnaire de paquets Python, généralement inclus avec Python.
+- **Python 3**: Make sure Python 3 (version 3.7 or higher recommended) is installed on both machines.
+- **pip**: The Python package manager, usually included with Python.
 
 ## Installation
 
-1.  **Clonez ou copiez ce projet** sur les deux machines que vous souhaitez comparer. Placez-le dans un répertoire de votre choix.
-2.  **Ouvrez un terminal ou une invite de commande** dans le dossier `python-benchmark`.
-3.  **(Recommandé)** Créez et activez un environnement virtuel :
+1.  **Clone or copy this project** on both machines you want to compare. Place it in a directory of your choice.
+2.  **Open a terminal or command prompt** in the `python-benchmark` folder.
+3.  **(Recommended)** Create and activate a virtual environment:
 
     ```bash
-    # Sur macOS/Linux
+    # On macOS/Linux
     python3 -m venv venv
     source venv/bin/activate
 
-    # Sur Windows (cmd)
+    # On Windows (cmd)
     python -m venv venv
     venv\Scripts\activate
 
-    # Sur Windows (PowerShell)
+    # On Windows (PowerShell)
     python -m venv venv
     .\venv\Scripts\Activate.ps1
     ```
 
-4.  **Installez les dépendances** :
+4.  **Install dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
 
-## Exécution des Benchmarks
+## Running the Benchmarks
 
-1.  **Assurez-vous qu'aucune autre application gourmande en ressources** ne tourne en arrière-plan sur la machine pour obtenir des résultats plus cohérents.
-2.  **Exécutez le script principal** depuis le terminal (assurez-vous que votre environnement virtuel est activé si vous en utilisez un) :
+1.  **Make sure no other resource-intensive applications** are running in the background on the machine to get more consistent results.
+2.  **Run the main script** from the terminal (make sure your virtual environment is activated if you're using one):
     ```bash
     python benchmark.py
     ```
-3.  Le script exécutera séquentiellement chaque benchmark et affichera le temps pris pour chacun. Un résumé final sera également affiché.
-4.  **Répétez l'opération** sur l'autre machine en utilisant **exactement le même code et les mêmes versions de bibliothèques** (grâce à `requirements.txt` et à l'environnement virtuel).
+3.  The script will sequentially run each benchmark and display the time taken for each. A final summary will also be displayed.
+4.  **Repeat the operation** on the other machine using **exactly the same code and library versions** (thanks to `requirements.txt` and the virtual environment).
 
-## Les Benchmarks
+## The Benchmarks
 
-- **Fibonacci (CPU)**: Teste la performance brute du CPU sur des appels de fonctions récursives (single-thread).
-- **Nombres Premiers (CPU)**: Teste la performance du CPU sur des calculs et boucles intensifs (single-thread).
-- **Multiplication de Matrices (CPU/SIMD)**: Utilise NumPy pour tester les capacités de calcul numérique, souvent optimisées via SIMD et des bibliothèques C/Fortran sous-jacentes. Peut utiliser plusieurs cœurs selon l'installation NumPy/BLAS.
-- **Opérations sur Listes (Mémoire/CPU)**: Mesure le temps nécessaire pour allouer une grande quantité de mémoire pour une liste Python et effectuer une opération dessus (tri).
-- **I/O Disque - Gros Fichier**: Teste la vitesse de lecture et d'écriture séquentielle sur le disque dur/SSD.
-- **I/O Disque - Petits Fichiers**: Teste la performance du système de fichiers pour créer, écrire et lire de nombreux petits fichiers, ce qui est courant lors des builds de projets ou de la gestion de caches.
-- **Hashing (CPU/Mémoire)**: Mesure la vitesse de calcul d'un hash SHA-256 sur une quantité de données en mémoire.
-- **Compression/Décompression (CPU)**: Teste la performance du CPU sur des algorithmes de compression/décompression (zlib).
+- **Fibonacci (CPU)**: Tests raw CPU performance on recursive function calls (single-thread).
+- **Prime Numbers (CPU)**: Tests CPU performance on intensive calculations and loops (single-thread).
+- **Matrix Multiplication (CPU/SIMD)**: Uses NumPy to test numerical computation capabilities, often optimized via SIMD and underlying C/Fortran libraries. May use multiple cores depending on NumPy/BLAS installation.
+- **List Operations (Memory/CPU)**: Measures the time needed to allocate a large amount of memory for a Python list and perform an operation on it (sorting).
+- **Disk I/O - Large File**: Tests sequential read and write speed on HDD/SSD.
+- **Disk I/O - Small Files**: Tests filesystem performance for creating, writing, and reading many small files, which is common during project builds or cache management.
+- **Hashing (CPU/Memory)**: Measures the speed of calculating a SHA-256 hash on a quantity of data in memory.
+- **Compression/Decompression (CPU)**: Tests CPU performance on compression/decompression algorithms (zlib).
 
-## Interprétation des Résultats
+## Interpreting Results
 
-- Comparez les temps (en secondes) obtenus pour chaque benchmark entre les deux machines.
-- **Un temps plus court indique une meilleure performance** pour ce test spécifique.
-- Notez les différences relatives. Une machine peut exceller en CPU pur mais être plus lente en I/O disque, par exemple.
-- Pour des résultats plus fiables, vous pouvez exécuter le script plusieurs fois sur chaque machine et faire une moyenne, ou noter la médiane.
+- Compare the times (in seconds) obtained for each benchmark between the two machines.
+- **A shorter time indicates better performance** for that specific test.
+- Note the relative differences. A machine might excel in pure CPU but be slower in disk I/O, for example.
+- For more reliable results, you can run the script multiple times on each machine and take an average, or note the median.
 
 ## Important
 
-- Assurez-vous d'utiliser la **même version de Python** et les **mêmes versions des bibliothèques** (NumPy) sur les deux machines pour une comparaison équitable. L'utilisation d'environnements virtuels et de `requirements.txt` aide grandement à cela.
-- Les performances d'I/O disque peuvent être influencées par l'état du disque (fragmentation sur HDD, espace libre sur SSD) et le système de fichiers.
-- Branchez les ordinateurs portables sur secteur pour éviter les limitations de performance liées à la gestion de l'énergie sur batterie.
+- Make sure to use the **same Python version** and the **same library versions** (NumPy) on both machines for a fair comparison. Using virtual environments and `requirements.txt` greatly helps with this.
+- Disk I/O performance can be influenced by disk state (fragmentation on HDD, free space on SSD) and the filesystem.
+- Plug in laptops to AC power to avoid performance limitations related to battery power management.

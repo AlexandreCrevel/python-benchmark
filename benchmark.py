@@ -11,25 +11,53 @@ from typing import Dict, Optional, List
 from io import StringIO
 import sys
 from datetime import datetime
+import platform
+import psutil
+import cpuinfo
+import GPUtil
 
-# --- Configuration des Benchmarks ---
-# Vous pouvez ajuster ces valeurs si un test est trop rapide ou trop lent
-FIB_NUMBER = 40          # Calcul Fibonacci (CPU intensif, appels récursifs)
-PRIME_LIMIT = 1500000     # Calcul de nombres premiers (CPU intensif, boucles)
-MATRIX_SIZE = 10000       # Multiplication de matrices (CPU/SIMD, utilise NumPy optimisé)
-LIST_SIZE = 20 * 1000 * 1000 # Allocation et manipulation de liste (Mémoire/CPU)
-LARGE_FILE_SIZE_MB = 2560 # Taille du fichier pour test I/O disque (en Mo)
-NUM_SMALL_FILES = 10000   # Nombre de petits fichiers pour test I/O disque
-SMALL_FILE_SIZE_KB = 40   # Taille des petits fichiers (en Ko)
-HASH_DATA_SIZE_MB = 1000  # Taille des données à hasher (CPU/Mémoire)
-COMPRESS_DATA_SIZE_MB = 500 # Taille des données à compresser (CPU)
+# --- Benchmark Configuration ---
+# You can adjust these values if a test is too fast or too slow
+FIB_NUMBER = 40          # Fibonacci calculation (CPU intensive, recursive calls)
+PRIME_LIMIT = 1500000     # Prime numbers calculation (CPU intensive, loops)
+MATRIX_SIZE = 10000       # Matrix multiplication (CPU/SIMD, uses optimized NumPy)
+LIST_SIZE = 20 * 1000 * 1000 # List allocation and manipulation (Memory/CPU)
+LARGE_FILE_SIZE_MB = 2560 # File size for disk I/O test (in MB)
+NUM_SMALL_FILES = 10000   # Number of small files for disk I/O test
+SMALL_FILE_SIZE_KB = 40   # Size of small files (in KB)
+HASH_DATA_SIZE_MB = 1000  # Size of data to hash (CPU/Memory)
+COMPRESS_DATA_SIZE_MB = 500 # Size of data to compress (CPU)
 
-TEMP_DIR = "benchmark_temp" # Dossier temporaire pour les tests de fichiers
+TEMP_DIR = "benchmark_temp" # Temporary directory for file tests
 
-# --- Fonctions de Benchmark ---
+def get_system_info() -> Dict[str, str]:
+    """Get detailed system information."""
+    info = {
+        "python": '.'.join(map(str, sys.version_info[:3])),
+        "numpy": np.__version__,
+        "machine": platform.node(),
+        "os": f"{platform.system()} {platform.release()}",
+        "cpu": cpuinfo.get_cpu_info()['brand_raw'],
+        "ram": f"{psutil.virtual_memory().total / (1024**3):.1f} GB",
+        "python_bits": f"{platform.architecture()[0]}",
+    }
+    
+    # Get GPU information if available
+    try:
+        gpus = GPUtil.getGPUs()
+        if gpus:
+            info['gpu'] = f"{gpus[0].name} ({gpus[0].memoryTotal}MB)"
+        else:
+            info['gpu'] = "No GPU detected"
+    except:
+        info['gpu'] = "Unable to detect GPU"
+    
+    return info
+
+# --- Benchmark Functions ---
 
 def benchmark_fibonacci(n):
-    """Calcule le n-ième nombre de Fibonacci de manière récursive (inefficace exprès)."""
+    """Calculate the nth Fibonacci number recursively (intentionally inefficient)."""
     def fib(x):
         if x <= 1:
             return x
@@ -38,11 +66,11 @@ def benchmark_fibonacci(n):
     start_time = time.perf_counter()
     result = fib(n)
     end_time = time.perf_counter()
-    print(f"  -> Fibonacci({n}) = {result} (peut être différent si n > ~90 à cause des floats)")
+    print(f"  -> Fibonacci({n}) = {result} (may differ if n > ~90 due to floats)")
     return end_time - start_time
 
 def benchmark_primes(limit):
-    """Trouve les nombres premiers jusqu'à une limite donnée (méthode simple)."""
+    """Find prime numbers up to a given limit (simple method)."""
     start_time = time.perf_counter()
     primes = []
     for num in range(2, limit + 1):
@@ -54,64 +82,64 @@ def benchmark_primes(limit):
         if is_prime:
             primes.append(num)
     end_time = time.perf_counter()
-    print(f"  -> Trouvé {len(primes)} nombres premiers jusqu'à {limit}")
+    print(f"  -> Found {len(primes)} prime numbers up to {limit}")
     return end_time - start_time
 
 def benchmark_matrix_multiplication(size):
-    """Effectue une multiplication de matrices carrées avec NumPy."""
+    """Perform square matrix multiplication with NumPy."""
     start_time = time.perf_counter()
-    # Crée deux matrices aléatoires
+    # Create two random matrices
     matrix_a = np.random.rand(size, size)
     matrix_b = np.random.rand(size, size)
     # Multiplication
     result_matrix = np.dot(matrix_a, matrix_b)
     end_time = time.perf_counter()
-    print(f"  -> Multiplication de matrices {size}x{size} terminée. Somme de la résultante : {np.sum(result_matrix):.2f}")
+    print(f"  -> Matrix multiplication {size}x{size} completed. Sum of result: {np.sum(result_matrix):.2f}")
     return end_time - start_time
 
 def benchmark_list_operations(size):
-    """Crée une grande liste d'entiers et la trie."""
+    """Create a large list of integers and sort it."""
     start_time = time.perf_counter()
-    # Création d'une grande liste
+    # Create a large list
     my_list = [random.randint(0, size) for _ in range(size)]
-    # Opération (tri) pour utiliser la mémoire et le CPU
+    # Operation (sort) to use memory and CPU
     my_list.sort()
     end_time = time.perf_counter()
-    print(f"  -> Création et tri d'une liste de {size} entiers terminé.")
+    print(f"  -> Creation and sorting of a list of {size} integers completed.")
     return end_time - start_time
 
 def benchmark_large_file_io(file_size_mb, chunk_size=1024*1024):
-    """Écrit puis lit un gros fichier temporaire."""
+    """Write then read a large temporary file."""
     if not os.path.exists(TEMP_DIR):
         os.makedirs(TEMP_DIR)
     file_path = os.path.join(TEMP_DIR, "large_temp_file.bin")
     file_size_bytes = file_size_mb * 1024 * 1024
-    data_chunk = os.urandom(chunk_size) # 1 Mo de données aléatoires
+    data_chunk = os.urandom(chunk_size) # 1 Mo of random data
 
-    # --- Écriture ---
+    # --- Writing ---
     start_time_write = time.perf_counter()
     bytes_written = 0
     try:
         with open(file_path, 'wb') as f:
             while bytes_written < file_size_bytes:
                 write_size = min(chunk_size, file_size_bytes - bytes_written)
-                if write_size < chunk_size: # Ajuster le dernier chunk
+                if write_size < chunk_size: # Adjust last chunk
                      data_chunk = os.urandom(write_size)
                 f.write(data_chunk[:write_size])
                 bytes_written += write_size
-            f.flush() # Force l'écriture sur le disque (peut varier selon l'OS)
-            os.fsync(f.fileno()) # Tente de forcer la synchronisation physique
+            f.flush() # Force disk write (may vary by OS)
+            os.fsync(f.fileno()) # Try to force physical sync
     except Exception as e:
-        print(f"  Erreur pendant l'écriture: {e}")
-        # Cleanup en cas d'erreur
+        print(f"  Error during writing: {e}")
+        # Cleanup in case of error
         if os.path.exists(file_path):
             os.remove(file_path)
-        return None, None # Indique une erreur
+        return None, None
     end_time_write = time.perf_counter()
     write_duration = end_time_write - start_time_write
-    print(f"  -> Écrit {file_size_mb} Mo sur le disque.")
+    print(f"  -> Wrote {file_size_mb} Mo to disk.")
 
-    # --- Lecture ---
+    # --- Reading ---
     start_time_read = time.perf_counter()
     bytes_read = 0
     try:
@@ -121,56 +149,56 @@ def benchmark_large_file_io(file_size_mb, chunk_size=1024*1024):
                 if not chunk:
                     break
                 bytes_read += len(chunk)
-                # On pourrait faire quelque chose avec le chunk ici pour simuler un traitement
+                # We could do something with the chunk here to simulate processing
     except Exception as e:
-        print(f"  Erreur pendant la lecture: {e}")
-         # Cleanup en cas d'erreur
+        print(f"  Error during reading: {e}")
+        # Cleanup in case of error
         if os.path.exists(file_path):
             os.remove(file_path)
-        return write_duration, None # Indique une erreur
+        return write_duration, None # Indicate an error
 
     end_time_read = time.perf_counter()
     read_duration = end_time_read - start_time_read
-    print(f"  -> Lu {bytes_read / (1024*1024):.2f} Mo depuis le disque.")
+    print(f"  -> Read {bytes_read / (1024*1024):.2f} Mo from disk.")
 
     # --- Nettoyage ---
     try:
         if os.path.exists(file_path):
             os.remove(file_path)
     except Exception as e:
-        print(f"  Avertissement: impossible de supprimer le fichier temporaire {file_path}: {e}")
+        print(f"  Warning: Could not delete temporary file {file_path}: {e}")
 
 
     return write_duration, read_duration
 
 def benchmark_small_files_io(num_files, file_size_kb):
-    """Crée, écrit et lit de nombreux petits fichiers."""
+    """Create, write and read many small files."""
     if not os.path.exists(TEMP_DIR):
         os.makedirs(TEMP_DIR)
 
     file_paths = [os.path.join(TEMP_DIR, f"small_file_{i}.txt") for i in range(num_files)]
     file_size_bytes = file_size_kb * 1024
-    # Générer des données aléatoires une seule fois
+    # Generate random data once
     small_data = ''.join(random.choices(string.ascii_letters + string.digits, k=file_size_bytes)).encode('utf-8')
 
-    # --- Écriture ---
+    # --- Writing ---
     start_time_write = time.perf_counter()
     try:
         for file_path in file_paths:
             with open(file_path, 'wb') as f:
                 f.write(small_data)
-        # On pourrait tenter fsync sur le dossier sous Linux/Mac mais c'est complexe
+        # We could try fsync on the directory under Linux/Mac but it's complex
     except Exception as e:
-        print(f"  Erreur pendant l'écriture des petits fichiers: {e}")
-        # Cleanup partiel
+        print(f"  Error during writing small files: {e}")
+        # Cleanup partial
         for fp in file_paths:
             if os.path.exists(fp): os.remove(fp)
         return None, None
     end_time_write = time.perf_counter()
     write_duration = end_time_write - start_time_write
-    print(f"  -> Écrit {num_files} fichiers de {file_size_kb} Ko.")
+    print(f"  -> Wrote {num_files} files of {file_size_kb} Ko.")
 
-    # --- Lecture ---
+    # --- Reading ---
     start_time_read = time.perf_counter()
     total_bytes_read = 0
     try:
@@ -179,27 +207,27 @@ def benchmark_small_files_io(num_files, file_size_kb):
                 content = f.read()
                 total_bytes_read += len(content)
     except Exception as e:
-        print(f"  Erreur pendant la lecture des petits fichiers: {e}")
-         # Cleanup partiel
+        print(f"  Error during reading small files: {e}")
+        # Cleanup partial
         for fp in file_paths:
             if os.path.exists(fp): os.remove(fp)
         return write_duration, None
     end_time_read = time.perf_counter()
     read_duration = end_time_read - start_time_read
-    print(f"  -> Lu {total_bytes_read / (1024*1024):.2f} Mo depuis {num_files} petits fichiers.")
+    print(f"  -> Read {total_bytes_read / (1024*1024):.2f} Mo from {num_files} small files.")
 
-    # --- Nettoyage ---
+    # --- Cleanup ---
     try:
         for file_path in file_paths:
             if os.path.exists(file_path):
                 os.remove(file_path)
     except Exception as e:
-        print(f"  Avertissement: problème lors du nettoyage des petits fichiers: {e}")
+        print(f"  Warning: Could not clean up small files: {e}")
 
     return write_duration, read_duration
 
 def benchmark_hashing(data_size_mb):
-    """Génère des données aléatoires et calcule leur hash SHA-256."""
+    """Generate random data and calculate its SHA-256 hash."""
     start_time = time.perf_counter()
     data_size_bytes = data_size_mb * 1024 * 1024
     # Générer les données (peut consommer de la mémoire)
@@ -207,38 +235,37 @@ def benchmark_hashing(data_size_mb):
     # Calculer le hash
     sha256_hash = hashlib.sha256(random_data).hexdigest()
     end_time = time.perf_counter()
-    print(f"  -> Hash SHA-256 de {data_size_mb} Mo calculé: {sha256_hash[:10]}...")
+    print(f"  -> SHA-256 hash of {data_size_mb} Mo calculated: {sha256_hash[:10]}...")
     return end_time - start_time
 
 def benchmark_compression(data_size_mb):
-    """Génère des données aléatoires et les compresse avec zlib."""
+    """Generate random data and compress it with zlib."""
     start_time_compress = time.perf_counter()
     data_size_bytes = data_size_mb * 1024 * 1024
-    # Générer les données
+    # Generate the data
     original_data = os.urandom(data_size_bytes)
-    # Compression
-    compressed_data = zlib.compress(original_data, level=6) # Niveau de compression par défaut
+    # Compress
+    compressed_data = zlib.compress(original_data, level=6) # Default compression level
     end_time_compress = time.perf_counter()
     compress_duration = end_time_compress - start_time_compress
     original_size = len(original_data)
     compressed_size = len(compressed_data)
     ratio = compressed_size / original_size if original_size > 0 else 0
-    print(f"  -> Compression de {data_size_mb} Mo terminée. Ratio: {ratio:.2f} ({compressed_size} bytes)")
+    print(f"  -> Compression of {data_size_mb} Mo completed. Ratio: {ratio:.2f} ({compressed_size} bytes)")
 
-    # Décompression (pour vérifier et benchmarker aussi)
+    # Decompress (for verification and benchmarking)
     start_time_decompress = time.perf_counter()
     decompressed_data = zlib.decompress(compressed_data)
     end_time_decompress = time.perf_counter()
     decompress_duration = end_time_decompress - start_time_decompress
-    print(f"  -> Décompression de {compressed_size / (1024*1024):.2f} Mo terminée.")
-    # Vérification simple
+    print(f"  -> Decompression of {compressed_size / (1024*1024):.2f} Mo completed.")
+    # Simple verification
     if len(decompressed_data) != original_size:
-         print("  -> ERREUR: La taille décompressée ne correspond pas !")
-
+        print("  -> Error: Decompressed size does not match!")
 
     return compress_duration, decompress_duration
 
-# --- Exécution des Benchmarks ---
+# --- Execution of Benchmarks ---
 
 def generate_markdown_report(
     results: Dict[str, Optional[float]],
@@ -258,97 +285,120 @@ def generate_markdown_report(
     md = [
         f"# Python Benchmark Results – {config.get('machine', 'Unknown Machine')}",
         "",
-        "## Configuration",
+        "## System Information",
         "",
-        f"- **Python**: {config['python']}",
+        f"- **Operating System**: {config['os']}",
+        f"- **CPU**: {config['cpu']}",
+        f"- **RAM**: {config['ram']}",
+        f"- **GPU**: {config['gpu']}",
+        f"- **Python**: {config['python']} ({config['python_bits']})",
         f"- **NumPy**: {config['numpy']}",
         "",
         "---",
         "",
-        "## Benchmarks détaillés",
+        "## Detailed Benchmarks",
         ""
     ]
     md.extend(logs)
     md.append("\n---\n")
-    md.append(f"> Dossier temporaire `{config.get('temp_dir', 'benchmark_temp')}` nettoyé.")
+    md.append(f"> Temporary directory `{config.get('temp_dir', 'benchmark_temp')}` cleaned.")
     md.append("\n---\n")
-    md.append("## Résumé des résultats (secondes, plus bas = meilleur)\n")
-    md.append("| Test                | Temps (s) |\n|---------------------|-----------|")
-    order = [
-        ("fibonacci", "Fibonacci"),
-        ("primes", "Primes"),
-        ("matrix_multiply", "Matrix Multiply"),
-        ("list_operations", "List Operations"),
-        ("large_file_write", "Large File Write"),
-        ("large_file_read", "Large File Read"),
-        ("small_files_write", "Small Files Write"),
-        ("small_files_read", "Small Files Read"),
-        ("hashing", "Hashing"),
-        ("compression", "Compression"),
-        ("decompression", "Decompression")
-    ]
-    for key, label in order:
+    md.append("## Results Summary (seconds, lower = better)\n")
+    md.append("| Test                | Time (s) |\n|---------------------|-----------|")
+    labels = {
+        "fibonacci": "Fibonacci",
+        "primes": "Primes",
+        "matrix_multiply": "Matrix Multiply",
+        "list_operations": "List Operations",
+        "large_file_write": "Large File Write",
+        "large_file_read": "Large File Read",
+        "small_files_write": "Small Files Write",
+        "small_files_read": "Small Files Read",
+        "hashing": "Hashing",
+        "compression": "Compression",
+        "decompression": "Decompression"
+    }
+    for key, label in labels.items():
         val = results.get(key)
-        md.append(f"| {label:<19} | {val:.4f}    |" if val is not None else f"| {label:<19} | ÉCHEC     |")
+        # Format the value conditionally first, then align the resulting string
+        value_str = f"{val:.4f}" if val is not None else "FAILURE"
+        md.append(f"| {label:<19} | {value_str:<9} |")
     md.append("\n---\n")
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(md))
+    
+    # Write to file
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(md))
 
 if __name__ == "__main__":
     results = {}
     logs: List[str] = []
-    config = {
-        "python": '.'.join(map(str, os.sys.version_info[:3])),
-        "numpy": np.__version__,
-        "machine": os.uname().nodename if hasattr(os, 'uname') else 'Unknown',
-        "temp_dir": TEMP_DIR
-    }
+    config = get_system_info()
     def log_md(title: str, content: str) -> None:
+        content = content.replace("Temps écoulé:", "Time elapsed:")
+        content = content.replace("Temps d'écriture :", "Write time:")
+        content = content.replace("Temps de lecture :", "Read time:")
+        content = content.replace("Temps de compression :", "Compression time:")
+        content = content.replace("Temps de décompression :", "Decompression time:")
+        content = content.replace("secondes", "seconds")
+        content = content.replace("Écrit", "Wrote")
+        content = content.replace("Lu", "Read")
+        content = content.replace("fichiers de", "files of")
+        content = content.replace("petits fichiers", "small files")
+        content = content.replace("depuis", "from")
+        content = content.replace("sur le disque", "to disk")
+        content = content.replace("Hash SHA-256 de", "SHA-256 hash of")
+        content = content.replace("calculé:", "calculated:")
+        content = content.replace("Mo", "MB")
         logs.append(f"### {title}\n```text\n{content}\n```")
-    print("Démarrage des benchmarks Python...")
-    print("-" * 30)
-    print(f"Configuration : Python {config['python']}, NumPy {config['numpy']}")
-    print("-" * 30)
+    print("Starting Python benchmarks...")
+    print("-" * 50)
+    print("System Configuration:")
+    print(f"OS: {config['os']}")
+    print(f"CPU: {config['cpu']}")
+    print(f"RAM: {config['ram']}")
+    print(f"GPU: {config['gpu']}")
+    print(f"Python: {config['python']} ({config['python_bits']})")
+    print(f"NumPy: {config['numpy']}")
+    print("-" * 50)
 
-    # 1. Calcul CPU - Fibonacci
-    # 1. Calcul CPU - Fibonacci
-    print(f"[1] Benchmark CPU: Calcul de Fibonacci({FIB_NUMBER})")
+    # 1. CPU - Fibonacci
+    print(f"[1] CPU Benchmark: Fibonacci({FIB_NUMBER})")
     buf = StringIO()
     sys.stdout = buf
     results['fibonacci'] = benchmark_fibonacci(FIB_NUMBER)
     sys.stdout = sys.__stdout__
-    log_md("1. CPU – Calcul de Fibonacci(40)", buf.getvalue() + f"Temps écoulé: {results['fibonacci']:.4f} secondes")
-    print(f"Temps écoulé: {results['fibonacci']:.4f} secondes\n")
+    log_md("1. CPU - Fibonacci(40)", buf.getvalue() + f"Time elapsed: {results['fibonacci']:.4f} seconds")
+    print(f"Time elapsed: {results['fibonacci']:.4f} seconds\n")
 
-    # 2. Calcul CPU - Nombres Premiers
-    print(f"[2] Benchmark CPU: Calcul des nombres premiers jusqu'à {PRIME_LIMIT}")
+    # 2. CPU - Prime Numbers
+    print(f"[2] CPU Benchmark: Prime numbers up to {PRIME_LIMIT}")
     buf = StringIO()
     sys.stdout = buf
     results['primes'] = benchmark_primes(PRIME_LIMIT)
     sys.stdout = sys.__stdout__
-    log_md("2. CPU – Nombres premiers jusqu'à 1 500 000", buf.getvalue() + f"Temps écoulé: {results['primes']:.4f} secondes")
-    print(f"Temps écoulé: {results['primes']:.4f} secondes\n")
+    log_md("2. CPU - Prime Numbers up to 1,500,000", buf.getvalue() + f"Time elapsed: {results['primes']:.4f} seconds")
+    print(f"Time elapsed: {results['primes']:.4f} seconds\n")
 
-    # 3. Calcul CPU/SIMD - Multiplication de Matrices (NumPy)
-    print(f"[3] Benchmark CPU/SIMD: Multiplication de matrices ({MATRIX_SIZE}x{MATRIX_SIZE})")
+    # 3. CPU/SIMD - Matrix Multiplication
+    print(f"[3] CPU/SIMD Benchmark: Matrix multiplication ({MATRIX_SIZE}x{MATRIX_SIZE})")
     buf = StringIO()
     sys.stdout = buf
     results['matrix_multiply'] = benchmark_matrix_multiplication(MATRIX_SIZE)
     sys.stdout = sys.__stdout__
-    log_md("3. CPU/SIMD – Multiplication de matrices (10000x10000)", buf.getvalue() + f"Temps écoulé: {results['matrix_multiply']:.4f} secondes")
-    print(f"Temps écoulé: {results['matrix_multiply']:.4f} secondes\n")
+    log_md("3. CPU/SIMD - Matrix Multiplication (10000x10000)", buf.getvalue() + f"Time elapsed: {results['matrix_multiply']:.4f} seconds")
+    print(f"Time elapsed: {results['matrix_multiply']:.4f} seconds\n")
 
-    # 4. Mémoire/CPU - Opérations sur Listes
-    print(f"[4] Benchmark Mémoire/CPU: Création et tri d'une liste ({LIST_SIZE} éléments)")
+    # 4. Memory/CPU - List Operations
+    print(f"[4] Memory/CPU Benchmark: List creation and sorting ({LIST_SIZE:,} elements)")
     buf = StringIO()
     sys.stdout = buf
     results['list_operations'] = benchmark_list_operations(LIST_SIZE)
     sys.stdout = sys.__stdout__
-    log_md("4. Mémoire/CPU – Création et tri d'une liste (20 000 000 éléments)", buf.getvalue() + f"Temps écoulé: {results['list_operations']:.4f} secondes")
-    print(f"Temps écoulé: {results['list_operations']:.4f} secondes\n")
+    log_md("4. Memory/CPU - List Creation and Sorting (20,000,000 elements)", buf.getvalue() + f"Time elapsed: {results['list_operations']:.4f} seconds")
+    print(f"Time elapsed: {results['list_operations']:.4f} seconds\n")
 
-    # 5. I/O Disque - Gros Fichier
-    print(f"[5] Benchmark I/O Disque: Écriture/Lecture d'un fichier de {LARGE_FILE_SIZE_MB} Mo")
+    # 5. Disk I/O - Large File
+    print(f"[5] Disk I/O Benchmark: Writing/Reading a {LARGE_FILE_SIZE_MB} MB file")
     buf = StringIO()
     sys.stdout = buf
     write_time, read_time = benchmark_large_file_io(LARGE_FILE_SIZE_MB)
@@ -357,16 +407,16 @@ if __name__ == "__main__":
         results['large_file_write'] = write_time
     if read_time is not None:
         results['large_file_read'] = read_time
-    log_md("5. I/O Disque – Écriture/Lecture d'un fichier de 2560 Mo", buf.getvalue() + (f"Temps d'écriture : {results.get('large_file_write', 0):.4f} secondes\nTemps de lecture : {results.get('large_file_read', 0):.4f} secondes" if write_time and read_time else "ÉCHEC"))
+    log_md("5. Disk I/O - Writing/Reading a 2560 MB file", buf.getvalue() + (f"Write time: {results.get('large_file_write', 0):.4f} seconds\nRead time: {results.get('large_file_read', 0):.4f} seconds" if write_time and read_time else "FAILURE"))
     if write_time is not None:
-        print(f"Temps d'écriture : {results['large_file_write']:.4f} secondes")
+        print(f"Write time: {results['large_file_write']:.4f} seconds")
     if read_time is not None:
-        print(f"Temps de lecture  : {results['large_file_read']:.4f} secondes\n")
+        print(f"Read time: {results['large_file_read']:.4f} seconds\n")
     else:
-         print("Le test d'I/O sur gros fichier a échoué.\n")
+         print("Large file I/O test failed.\n")
 
-    # 6. I/O Disque - Petits Fichiers
-    print(f"[6] Benchmark I/O Disque: Écriture/Lecture de {NUM_SMALL_FILES} fichiers de {SMALL_FILE_SIZE_KB} Ko")
+    # 6. Disk I/O - Small Files
+    print(f"[6] Disk I/O Benchmark: Writing/Reading {NUM_SMALL_FILES} files of {SMALL_FILE_SIZE_KB} KB")
     buf = StringIO()
     sys.stdout = buf
     write_time_small, read_time_small = benchmark_small_files_io(NUM_SMALL_FILES, SMALL_FILE_SIZE_KB)
@@ -375,25 +425,25 @@ if __name__ == "__main__":
         results['small_files_write'] = write_time_small
     if read_time_small is not None:
         results['small_files_read'] = read_time_small
-    log_md("6. I/O Disque – Écriture/Lecture de 10 000 fichiers de 40 Ko", buf.getvalue() + (f"Temps d'écriture : {results.get('small_files_write', 0):.4f} secondes\nTemps de lecture : {results.get('small_files_read', 0):.4f} secondes" if write_time_small and read_time_small else "ÉCHEC"))
+    log_md("6. Disk I/O - Writing/Reading 10,000 files of 40 KB", buf.getvalue() + (f"Write time: {results.get('small_files_write', 0):.4f} seconds\nRead time: {results.get('small_files_read', 0):.4f} seconds" if write_time_small and read_time_small else "FAILURE"))
     if write_time_small is not None:
-        print(f"Temps d'écriture : {results['small_files_write']:.4f} secondes")
+        print(f"Write time: {results['small_files_write']:.4f} seconds")
     if read_time_small is not None:
-        print(f"Temps de lecture  : {results['small_files_read']:.4f} secondes\n")
+        print(f"Read time: {results['small_files_read']:.4f} seconds\n")
     else:
-         print("Le test d'I/O sur petits fichiers a échoué.\n")
+         print("Small files I/O test failed.\n")
 
-    # 7. CPU/Mémoire - Hashing
-    print(f"[7] Benchmark CPU/Mémoire: Hash SHA-256 de {HASH_DATA_SIZE_MB} Mo de données")
+    # 7. CPU/Memory - Hashing
+    print(f"[7] CPU/Memory Benchmark: SHA-256 hash of {HASH_DATA_SIZE_MB} MB of data")
     buf = StringIO()
     sys.stdout = buf
     results['hashing'] = benchmark_hashing(HASH_DATA_SIZE_MB)
     sys.stdout = sys.__stdout__
-    log_md("7. CPU/Mémoire – Hash SHA-256 de 1000 Mo de données", buf.getvalue() + f"Temps écoulé: {results['hashing']:.4f} secondes")
-    print(f"Temps écoulé: {results['hashing']:.4f} secondes\n")
+    log_md("7. CPU/Memory - SHA-256 hash of 1000 MB of data", buf.getvalue() + f"Time elapsed: {results['hashing']:.4f} seconds")
+    print(f"Time elapsed: {results['hashing']:.4f} seconds\n")
 
-    # 8. CPU - Compression/Décompression
-    print(f"[8] Benchmark CPU: Compression/Décompression zlib de {COMPRESS_DATA_SIZE_MB} Mo de données")
+    # 8. CPU - Compression/Decompression
+    print(f"[8] CPU Benchmark: zlib Compression/Decompression of {COMPRESS_DATA_SIZE_MB} MB of data")
     buf = StringIO()
     sys.stdout = buf
     compress_time, decompress_time = benchmark_compression(COMPRESS_DATA_SIZE_MB)
@@ -402,28 +452,28 @@ if __name__ == "__main__":
         results['compression'] = compress_time
     if decompress_time is not None:
         results['decompression'] = decompress_time
-    log_md("8. CPU – Compression/Décompression zlib de 500 Mo", buf.getvalue() + (f"Temps de compression : {results.get('compression', 0):.4f} secondes\nTemps de décompression : {results.get('decompression', 0):.4f} secondes" if compress_time and decompress_time else "ÉCHEC"))
+    log_md("8. CPU - zlib Compression/Decompression of 500 MB", buf.getvalue() + (f"Compression time: {results.get('compression', 0):.4f} seconds\nDecompression time: {results.get('decompression', 0):.4f} seconds" if compress_time and decompress_time else "FAILURE"))
     if compress_time is not None:
-        print(f"Temps de compression   : {results['compression']:.4f} secondes")
+        print(f"Compression time: {results['compression']:.4f} seconds")
     if decompress_time is not None:
-        print(f"Temps de décompression : {results['decompression']:.4f} secondes\n")
+        print(f"Decompression time: {results['decompression']:.4f} seconds\n")
     else:
-        print("Le test de compression/décompression a échoué.\n")
+        print("Compression/Decompression test failed.\n")
 
 
-    # --- Nettoyage final du dossier temporaire ---
+    # --- Final cleanup of the temporary directory ---
     if os.path.exists(TEMP_DIR):
         try:
-            # Supprimer les fichiers restants s'il y en a
+            # Remove any remaining files
             for item in os.listdir(TEMP_DIR):
                 item_path = os.path.join(TEMP_DIR, item)
                 if os.path.isfile(item_path):
                     os.remove(item_path)
-            # Supprimer le dossier lui-même
+            # Remove the directory itself
             os.rmdir(TEMP_DIR)
-            print(f"Dossier temporaire '{TEMP_DIR}' nettoyé.")
+            print(f"Temporary directory '{TEMP_DIR}' cleaned.")
         except Exception as e:
-            print(f"Avertissement: Impossible de nettoyer complètement le dossier temporaire '{TEMP_DIR}': {e}")
+            print(f"Warning: Could not completely clean the temporary directory '{TEMP_DIR}': {e}")
 
     # --- Génération du rapport Markdown ---
     output_dir = "results"
@@ -431,15 +481,15 @@ if __name__ == "__main__":
     now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_path = os.path.join(output_dir, f"benchmark_{now}.md")
     generate_markdown_report(results, config, logs, output_path)
-    print(f"\nRapport markdown généré dans : {output_path}\n")
+    print(f"\nMarkdown report generated in: {output_path}\n")
 
     # --- Affichage du Résumé ---
     print("=" * 30)
-    print("RÉSUMÉ DES RÉSULTATS (en secondes, plus bas = meilleur)")
+    print("RESULTS SUMMARY (in seconds, lower = better)")
     print("-" * 30)
     for name, duration in results.items():
         if duration is not None:
              print(f"{name:<25}: {duration:.4f}")
         else:
-             print(f"{name:<25}: ÉCHEC")
+             print(f"{name:<25}: FAILURE")
     print("=" * 30)
